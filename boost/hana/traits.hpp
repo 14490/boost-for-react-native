@@ -3,7 +3,7 @@
 Defines function-like equivalents to the standard `<type_traits>`, and also
 to some utilities like `std::declval`.
 
-@copyright Louis Dionne 2013-2016
+@copyright Louis Dionne 2013-2017
 Distributed under the Boost Software License, Version 1.0.
 (See accompanying file LICENSE.md or copy at http://boost.org/LICENSE_1_0.txt)
  */
@@ -67,7 +67,9 @@ BOOST_HANA_NAMESPACE_BEGIN namespace traits {
     constexpr auto is_trivial = detail::hana_trait<std::is_trivial>{};
     constexpr auto is_trivially_copyable = detail::hana_trait<std::is_trivially_copyable>{};
     constexpr auto is_standard_layout = detail::hana_trait<std::is_standard_layout>{};
+#if __cplusplus < 202002L
     constexpr auto is_pod = detail::hana_trait<std::is_pod>{};
+#endif
     constexpr auto is_literal_type = detail::hana_trait<std::is_literal_type>{};
     constexpr auto is_empty = detail::hana_trait<std::is_empty>{};
     constexpr auto is_polymorphic = detail::hana_trait<std::is_polymorphic>{};
@@ -194,7 +196,6 @@ BOOST_HANA_NAMESPACE_BEGIN namespace traits {
 
     constexpr auto common_type = metafunction<std::common_type>;
     constexpr auto underlying_type = metafunction<std::underlying_type>;
-    constexpr auto result_of = metafunction<std::result_of>;
 
 
     ///////////////////////

@@ -16,8 +16,14 @@
 #include <boost/math/policies/error_handling.hpp>
 #include <boost/math/constants/constants.hpp>
 #include <boost/math/special_functions/math_fwd.hpp>
-#include <boost/mpl/int.hpp>
 #include <boost/type_traits/is_convertible.hpp>
+
+#ifdef BOOST_MATH_HAVE_CONSTEXPR_TABLES
+#include <array>
+#else
+#include <boost/array.hpp>
+#endif
+
 
 namespace boost { namespace math { 
    
@@ -60,17 +66,17 @@ struct bernoulli_imp_variant
       (std::numeric_limits<T>::max_exponent == 128)
       && (std::numeric_limits<T>::radix == 2)
       && (std::numeric_limits<T>::digits <= std::numeric_limits<float>::digits)
-      && (boost::is_convertible<float, T>::value) ? 1 :
+      && (std::is_convertible<float, T>::value) ? 1 :
       (
          (std::numeric_limits<T>::max_exponent == 1024)
          && (std::numeric_limits<T>::radix == 2)
          && (std::numeric_limits<T>::digits <= std::numeric_limits<double>::digits)
-         && (boost::is_convertible<double, T>::value) ? 2 :
+         && (std::is_convertible<double, T>::value) ? 2 :
          (
             (std::numeric_limits<T>::max_exponent == 16384)
             && (std::numeric_limits<T>::radix == 2)
             && (std::numeric_limits<T>::digits <= std::numeric_limits<long double>::digits)
-            && (boost::is_convertible<long double, T>::value) ? 3 : (!is_convertible<boost::int64_t, T>::value ? 4 : 0)
+            && (std::is_convertible<long double, T>::value) ? 3 : (!is_convertible<boost::int64_t, T>::value ? 4 : 0)
          )
       );
 };
@@ -83,9 +89,13 @@ struct max_bernoulli_b2n : public detail::max_bernoulli_index<detail::bernoulli_
 namespace detail{
 
 template <class T>
-inline T unchecked_bernoulli_imp(std::size_t n, const mpl::int_<0>& )
+inline BOOST_MATH_CONSTEXPR_TABLE_FUNCTION T unchecked_bernoulli_imp(std::size_t n, const std::integral_constant<int, 0>& )
 {
+#ifdef BOOST_MATH_HAVE_CONSTEXPR_TABLES
+   constexpr std::array<boost::int64_t, 1 + max_bernoulli_b2n<T>::value> numerators =
+#else
    static const boost::array<boost::int64_t, 1 + max_bernoulli_b2n<T>::value> numerators =
+#endif
    {{
       boost::int64_t(            +1LL),
       boost::int64_t(            +1LL),
@@ -107,7 +117,11 @@ inline T unchecked_bernoulli_imp(std::size_t n, const mpl::int_<0>& )
       boost::int64_t(+2577687858367LL)
    }};
 
+#ifdef BOOST_MATH_HAVE_CONSTEXPR_TABLES
+   constexpr std::array<boost::int64_t, 1 + max_bernoulli_b2n<T>::value> denominators =
+#else
    static const boost::array<boost::int64_t, 1 + max_bernoulli_b2n<T>::value> denominators =
+#endif
    {{
       boost::int64_t(      1LL),
       boost::int64_t(      6LL),
@@ -132,9 +146,13 @@ inline T unchecked_bernoulli_imp(std::size_t n, const mpl::int_<0>& )
 }
 
 template <class T>
-inline T unchecked_bernoulli_imp(std::size_t n, const mpl::int_<1>& )
+inline BOOST_MATH_CONSTEXPR_TABLE_FUNCTION T unchecked_bernoulli_imp(std::size_t n, const std::integral_constant<int, 1>& )
 {
+#ifdef BOOST_MATH_HAVE_CONSTEXPR_TABLES
+   constexpr std::array<float, 1 + max_bernoulli_b2n<T>::value> bernoulli_data =
+#else
    static const boost::array<float, 1 + max_bernoulli_b2n<T>::value> bernoulli_data =
+#endif
    {{
       +1.00000000000000000000000000000000000000000F,
       +0.166666666666666666666666666666666666666667F,
@@ -176,9 +194,13 @@ inline T unchecked_bernoulli_imp(std::size_t n, const mpl::int_<1>& )
 
 
 template <class T>
-inline T unchecked_bernoulli_imp(std::size_t n, const mpl::int_<2>& )
+inline BOOST_MATH_CONSTEXPR_TABLE_FUNCTION T unchecked_bernoulli_imp(std::size_t n, const std::integral_constant<int, 2>& )
 {
+#ifdef BOOST_MATH_HAVE_CONSTEXPR_TABLES
+   constexpr std::array<double, 1 + max_bernoulli_b2n<T>::value> bernoulli_data =
+#else
    static const boost::array<double, 1 + max_bernoulli_b2n<T>::value> bernoulli_data =
+#endif
    {{
       +1.00000000000000000000000000000000000000000,
       +0.166666666666666666666666666666666666666667,
@@ -316,9 +338,13 @@ inline T unchecked_bernoulli_imp(std::size_t n, const mpl::int_<2>& )
 }
 
 template <class T>
-inline T unchecked_bernoulli_imp(std::size_t n, const mpl::int_<3>& )
+inline BOOST_MATH_CONSTEXPR_TABLE_FUNCTION T unchecked_bernoulli_imp(std::size_t n, const std::integral_constant<int, 3>& )
 {
+#ifdef BOOST_MATH_HAVE_CONSTEXPR_TABLES
+   constexpr std::array<long double, 1 + max_bernoulli_b2n<T>::value> bernoulli_data =
+#else
    static const boost::array<long double, 1 + max_bernoulli_b2n<T>::value> bernoulli_data =
+#endif
    {{
       +1.00000000000000000000000000000000000000000L,
       +0.166666666666666666666666666666666666666667L,
@@ -645,7 +671,7 @@ inline T unchecked_bernoulli_imp(std::size_t n, const mpl::int_<3>& )
 }
 
 template <class T>
-inline T unchecked_bernoulli_imp(std::size_t n, const mpl::int_<4>& )
+inline T unchecked_bernoulli_imp(std::size_t n, const std::integral_constant<int, 4>& )
 {
    //
    // Special case added for multiprecision types that have no conversion from long long,
@@ -688,9 +714,9 @@ inline T unchecked_bernoulli_imp(std::size_t n, const mpl::int_<4>& )
 } // namespace detail
 
 template<class T>
-inline T unchecked_bernoulli_b2n(const std::size_t n)
+inline BOOST_MATH_CONSTEXPR_TABLE_FUNCTION T unchecked_bernoulli_b2n(const std::size_t n)
 {
-   typedef mpl::int_<detail::bernoulli_imp_variant<T>::value> tag_type;
+   typedef std::integral_constant<int, detail::bernoulli_imp_variant<T>::value> tag_type;
 
    return detail::unchecked_bernoulli_imp<T>(n, tag_type());
 }

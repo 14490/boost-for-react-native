@@ -37,13 +37,12 @@
 #include <boost/intrusive/detail/simple_disposers.hpp>
 #include <boost/intrusive/detail/size_holder.hpp>
 #include <boost/intrusive/detail/algorithm.hpp>
+#include <boost/intrusive/detail/value_functors.hpp>
 
 #include <boost/move/utility_core.hpp>
 #include <boost/static_assert.hpp>
 
-#include <boost/intrusive/detail/minimal_less_equal_header.hpp>//std::less
 #include <cstddef>   //std::size_t
-#include <boost/intrusive/detail/minimal_pair_header.hpp>   //std::pair
 
 #if defined(BOOST_HAS_PRAGMA_ONCE)
 #  pragma once
@@ -233,7 +232,7 @@ class slist_impl
    {};
 
    struct data_t
-      :  public slist_impl::value_traits
+      :  public value_traits
    {
       typedef typename slist_impl::value_traits value_traits;
       explicit data_t(const value_traits &val_traits)
@@ -338,8 +337,15 @@ class slist_impl
       this->insert_after(this->cbefore_begin(), b, e);
    }
 
-   //! <b>Effects</b>: to-do
+   //! <b>Effects</b>: Constructs a container moving resources from another container.
+   //!   Internal value traits are move constructed and
+   //!   nodes belonging to x (except the node representing the "end") are linked to *this.
    //!
+   //! <b>Complexity</b>: Constant.
+   //!
+   //! <b>Throws</b>: If value_traits::node_traits::node's
+   //!   move constructor throws (this does not happen with predefined Boost.Intrusive hooks)
+   //!   or the move constructor of value traits throws.
    slist_impl(BOOST_RV_REF(slist_impl) x)
       : data_(::boost::move(x.priv_value_traits()))
    {
@@ -348,7 +354,7 @@ class slist_impl
       this->swap(x);
    }
 
-   //! <b>Effects</b>: to-do
+   //! <b>Effects</b>: Equivalent to swap
    //!
    slist_impl& operator=(BOOST_RV_REF(slist_impl) x)
    {  this->swap(x); return *this;  }
@@ -1115,7 +1121,7 @@ class slist_impl
    //!
    //! <b>Throws</b>: Nothing.
    //!
-   //! <b>Complexity</b>: Lineal to the elements (l - before_f + 1).
+   //! <b>Complexity</b>: Linear to the elements (l - before_f + 1).
    //!
    //! <b>Note</b>: Invalidates the iterators to the erased element.
    template<class Disposer>
@@ -1424,7 +1430,7 @@ class slist_impl
    void splice(const_iterator pos, slist_impl &x, const_iterator f, const_iterator l, size_type n)
    {  return this->splice_after(this->previous(pos), x, x.previous(f), x.previous(l), n);  }
 
-   //! <b>Effects</b>: This function sorts the list *this according to std::less<value_type>.
+   //! <b>Effects</b>: This function sorts the list *this according to operator<.
    //!   The sort is stable, that is, the relative order of equivalent elements is preserved.
    //!
    //! <b>Throws</b>: If value_traits::node_traits::node
@@ -1494,14 +1500,14 @@ class slist_impl
    //!
    //! <b>Throws</b>: If value_traits::node_traits::node
    //!   constructor throws (this does not happen with predefined Boost.Intrusive hooks)
-   //!   or std::less<value_type> throws. Basic guarantee.
+   //!   or operator< throws. Basic guarantee.
    //!
    //! <b>Complexity</b>: This function is linear time: it performs at most
    //!   size() + x.size() - 1 comparisons.
    //!
    //! <b>Note</b>: Iterators and references are not invalidated.
    void sort()
-   { this->sort(std::less<value_type>()); }
+   { this->sort(value_less<value_type>()); }
 
    //! <b>Requires</b>: p must be a comparison function that induces a strict weak
    //!   ordering and both *this and x must be sorted according to that ordering
@@ -1550,18 +1556,18 @@ class slist_impl
    }
 
    //! <b>Effects</b>: This function removes all of x's elements and inserts them
-   //!   in order into *this according to std::less<value_type>. The merge is stable;
+   //!   in order into *this according to operator<. The merge is stable;
    //!   that is, if an element from *this is equivalent to one from x, then the element
    //!   from *this will precede the one from x.
    //!
-   //! <b>Throws</b>: if std::less<value_type> throws. Basic guarantee.
+   //! <b>Throws</b>: if operator< throws. Basic guarantee.
    //!
    //! <b>Complexity</b>: This function is linear time: it performs at most
    //!   size() + x.size() - 1 comparisons.
    //!
    //! <b>Note</b>: Iterators and references are not invalidated
    void merge(slist_impl& x)
-   {  this->merge(x, std::less<value_type>());  }
+   {  this->merge(x, value_less<value_type>());  }
 
    //! <b>Effects</b>: Reverses the order of elements in the list.
    //!
@@ -1581,7 +1587,7 @@ class slist_impl
    //! <b>Effects</b>: Removes all the elements that compare equal to value.
    //!   No destructors are called.
    //!
-   //! <b>Throws</b>: If std::equal_to<value_type> throws. Basic guarantee.
+   //! <b>Throws</b>: If operator== throws. Basic guarantee.
    //!
    //! <b>Complexity</b>: Linear time. It performs exactly size() comparisons for equality.
    //!
@@ -1596,7 +1602,7 @@ class slist_impl
    //! <b>Effects</b>: Removes all the elements that compare equal to value.
    //!   Disposer::operator()(pointer) is called for every removed element.
    //!
-   //! <b>Throws</b>: If std::equal_to<value_type> throws. Basic guarantee.
+   //! <b>Throws</b>: If operator== throws. Basic guarantee.
    //!
    //! <b>Complexity</b>: Linear time. It performs exactly size() comparisons for equality.
    //!
@@ -1664,14 +1670,14 @@ class slist_impl
    //! <b>Effects</b>: Removes adjacent duplicate elements or adjacent
    //!   elements that are equal from the list. No destructors are called.
    //!
-   //! <b>Throws</b>: If std::equal_to<value_type> throws. Basic guarantee.
+   //! <b>Throws</b>: If operator== throws. Basic guarantee.
    //!
    //! <b>Complexity</b>: Linear time (size()-1) comparisons calls to pred()).
    //!
    //! <b>Note</b>: The relative order of elements that are not removed is unchanged,
    //!   and iterators to elements that are not removed remain valid.
    void unique()
-   {  this->unique_and_dispose(std::equal_to<value_type>(), detail::null_disposer());  }
+   {  this->unique_and_dispose(value_equal<value_type>(), detail::null_disposer());  }
 
    //! <b>Effects</b>: Removes adjacent duplicate elements or adjacent
    //!   elements that satisfy some binary predicate from the list.
@@ -1693,7 +1699,7 @@ class slist_impl
    //!   elements that satisfy some binary predicate from the list.
    //!   Disposer::operator()(pointer) is called for every removed element.
    //!
-   //! <b>Throws</b>: If std::equal_to<value_type> throws. Basic guarantee.
+   //! <b>Throws</b>: If operator== throws. Basic guarantee.
    //!
    //! <b>Complexity</b>: Linear time (size()-1) comparisons equality comparisons.
    //!
@@ -1701,7 +1707,7 @@ class slist_impl
    //!   and iterators to elements that are not removed remain valid.
    template<class Disposer>
    void unique_and_dispose(Disposer disposer)
-   {  this->unique(std::equal_to<value_type>(), disposer);  }
+   {  this->unique(value_equal<value_type>(), disposer);  }
 
    //! <b>Requires</b>: Disposer::operator()(pointer) shouldn't throw.
    //!
@@ -1930,8 +1936,7 @@ class slist_impl
       BOOST_INTRUSIVE_INVARIANT_ASSERT(node_traits::get_next(header_ptr));
       if (node_traits::get_next(header_ptr) == header_ptr)
       {
-         if (constant_time_size)
-            BOOST_INTRUSIVE_INVARIANT_ASSERT(this->priv_size_traits().get_size() == 0);
+         BOOST_INTRUSIVE_INVARIANT_ASSERT(!constant_time_size || this->priv_size_traits().get_size() == 0);
          return;
       }
       size_t node_count = 0;
@@ -1949,15 +1954,13 @@ class slist_impl
          }
          if ((!linear && next_p == header_ptr) || (linear && !next_p))
          {
-            if (cache_last)
-               BOOST_INTRUSIVE_INVARIANT_ASSERT(get_last_node() == p);
+            BOOST_INTRUSIVE_INVARIANT_ASSERT(!cache_last || get_last_node() == p);
             break;
          }
          p = next_p;
          ++node_count;
       }
-      if (constant_time_size)
-         BOOST_INTRUSIVE_INVARIANT_ASSERT(this->priv_size_traits().get_size() == node_count);
+      BOOST_INTRUSIVE_INVARIANT_ASSERT(!constant_time_size || this->priv_size_traits().get_size() == node_count);
    }
 
 
@@ -1988,7 +1991,7 @@ class slist_impl
    {  x.swap(y);  }
 
    private:
-   void priv_splice_after(const node_ptr & prev_pos_n, slist_impl &x, const node_ptr & before_f_n, const node_ptr & before_l_n)
+   void priv_splice_after(node_ptr prev_pos_n, slist_impl &x, node_ptr before_f_n, node_ptr before_l_n)
    {
       if (cache_last && (before_f_n != before_l_n)){
          if(prev_pos_n == this->get_last_node()){
@@ -2001,7 +2004,7 @@ class slist_impl
       node_algorithms::transfer_after(prev_pos_n, before_f_n, before_l_n);
    }
 
-   void priv_incorporate_after(const node_ptr & prev_pos_n, const node_ptr & first_n, const node_ptr & before_l_n)
+   void priv_incorporate_after(node_ptr prev_pos_n, node_ptr first_n, node_ptr before_l_n)
    {
       if(cache_last){
          if(prev_pos_n == this->get_last_node()){
@@ -2031,7 +2034,7 @@ class slist_impl
 
    void priv_shift_backwards(size_type n, detail::bool_<true>)
    {
-      std::pair<node_ptr, node_ptr> ret(
+      typename node_algorithms::node_pair ret(
          node_algorithms::move_first_n_forward
             (node_traits::get_next(this->get_root_node()), (std::size_t)n));
       if(ret.first){
@@ -2052,7 +2055,7 @@ class slist_impl
 
    void priv_shift_forward(size_type n, detail::bool_<true>)
    {
-      std::pair<node_ptr, node_ptr> ret(
+      typename node_algorithms::node_pair ret(
          node_algorithms::move_first_n_backwards
          (node_traits::get_next(this->get_root_node()), (std::size_t)n));
       if(ret.first){
@@ -2101,11 +2104,11 @@ class slist_impl
    }
 
    //circular version
-   static void priv_swap_lists(const node_ptr & this_node, const node_ptr & other_node, detail::bool_<false>)
+   static void priv_swap_lists(node_ptr this_node, node_ptr other_node, detail::bool_<false>)
    {  node_algorithms::swap_nodes(this_node, other_node); }
 
    //linear version
-   static void priv_swap_lists(const node_ptr & this_node, const node_ptr & other_node, detail::bool_<true>)
+   static void priv_swap_lists(node_ptr this_node, node_ptr other_node, detail::bool_<true>)
    {  node_algorithms::swap_trailing_nodes(this_node, other_node); }
 
    static slist_impl &priv_container_from_end_iterator(const const_iterator &end_iterator)
@@ -2195,45 +2198,45 @@ class slist
    typedef typename Base::size_type          size_type;
    typedef typename Base::node_ptr           node_ptr;
 
-   slist()
+   BOOST_INTRUSIVE_FORCEINLINE slist()
       :  Base()
    {}
 
-   explicit slist(const value_traits &v_traits)
+   BOOST_INTRUSIVE_FORCEINLINE explicit slist(const value_traits &v_traits)
       :  Base(v_traits)
    {}
 
    struct incorporate_t{};
 
-   slist( const node_ptr & f, const node_ptr & before_l
+   BOOST_INTRUSIVE_FORCEINLINE slist( const node_ptr & f, const node_ptr & before_l
              , size_type n, const value_traits &v_traits = value_traits())
       :  Base(f, before_l, n, v_traits)
    {}
 
    template<class Iterator>
-   slist(Iterator b, Iterator e, const value_traits &v_traits = value_traits())
+   BOOST_INTRUSIVE_FORCEINLINE slist(Iterator b, Iterator e, const value_traits &v_traits = value_traits())
       :  Base(b, e, v_traits)
    {}
 
-   slist(BOOST_RV_REF(slist) x)
+   BOOST_INTRUSIVE_FORCEINLINE slist(BOOST_RV_REF(slist) x)
       :  Base(BOOST_MOVE_BASE(Base, x))
    {}
 
-   slist& operator=(BOOST_RV_REF(slist) x)
+   BOOST_INTRUSIVE_FORCEINLINE slist& operator=(BOOST_RV_REF(slist) x)
    {  return static_cast<slist &>(this->Base::operator=(BOOST_MOVE_BASE(Base, x)));  }
 
    template <class Cloner, class Disposer>
-   void clone_from(const slist &src, Cloner cloner, Disposer disposer)
+   BOOST_INTRUSIVE_FORCEINLINE void clone_from(const slist &src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(src, cloner, disposer);  }
 
    template <class Cloner, class Disposer>
-   void clone_from(BOOST_RV_REF(slist) src, Cloner cloner, Disposer disposer)
+   BOOST_INTRUSIVE_FORCEINLINE void clone_from(BOOST_RV_REF(slist) src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(BOOST_MOVE_BASE(Base, src), cloner, disposer);  }
 
-   static slist &container_from_end_iterator(iterator end_iterator)
+   BOOST_INTRUSIVE_FORCEINLINE static slist &container_from_end_iterator(iterator end_iterator)
    {  return static_cast<slist &>(Base::container_from_end_iterator(end_iterator));   }
 
-   static const slist &container_from_end_iterator(const_iterator end_iterator)
+   BOOST_INTRUSIVE_FORCEINLINE static const slist &container_from_end_iterator(const_iterator end_iterator)
    {  return static_cast<const slist &>(Base::container_from_end_iterator(end_iterator));   }
 };
 
